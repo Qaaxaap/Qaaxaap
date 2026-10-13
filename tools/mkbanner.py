@@ -81,19 +81,28 @@ def right_stat(clock):
 
 TITLE = 'qaaxaap@lfs: ~/Projects/Qaaxaap'
 
+from ff_rows import LOGO_ROWS as FF_LOGO, FIELD_ROWS as FF_FIELDS   # real capture, bare pty
+
+FF_CMD = ' fastfetch'
+
+# the capture carries the colours the terminal emitted against black. The logo's
+# body colour was lifted for that black terminal, so it goes back to pure black
+# here: on this banner it reads as the darker part of the mark, which is enough.
+FF_LIFT = {'#333333': '#000000', None: C['text']}
+
 ROWS = [
     ('header', L_PLAIN, right_stat('18:36:50')),
     ('text', [('╰─', C['frame'], 0, 0), ('❯', C['prompt'], 0, 0), (' whoami', C['text'], 0, 0)]),
-    ('text', [('Qaaxaap', C['name'], 1, 0), (' — Rust · C++ · Nix · Wayland · Linux From Scratch', C['out'], 0, 0)]),
+    ('text', [('Qaaxaap', C['name'], 1, 0), (' — Rust · C++ · Nix · Wayland', C['out'], 0, 0)]),
     ('blank',),
     ('header', L_PLAIN, right_stat('18:36:51')),
-    ('text', [('╰─', C['frame'], 0, 0), ('❯', C['prompt'], 0, 0), (' cat ~/.philosophy', C['text'], 0, 0)]),
-    ('text', [('Understand everything. Modify everything. Own your system.', C['quote'], 0, 0)]),
+    ('text', [('╰─', C['frame'], 0, 0), ('❯', C['prompt'], 0, 0), (FF_CMD, C['text'], 0, 0)]),
+    ('ffblock',),
     ('blank',),
     ('header', L_PLAIN, right_stat('18:36:52')),
     ('text', [('╰─', C['frame'], 0, 0), ('❯', C['prompt'], 0, 0), (' ls ~/projects', C['text'], 0, 0)]),
     ('text', [('powerlevel11k', C['peach'], 0, 0), ('  Tuack-GUI', C['blue'], 0, 0),
-              ('  nix-workspace', C['sapphire'], 0, 0), ('  NixOS-dots', C['teal'], 0, 0)]),
+              ('  tuack-vscode', C['teal'], 0, 0), ('  d2l-learning', C['sapphire'], 0, 0)]),
 ]
 
 X0, Y0, X_END = 30, 46 + 6 + ASC * S, 970
@@ -120,6 +129,8 @@ def place(segs, x0):
     return out, spans, x
 
 
+FF_X = X0 + 41 * adv(' ')          # module list starts where the logo region ends
+
 rects, used, body, y = [], {}, [], Y0
 for row in ROWS:
     if row[0] == 'blank':
@@ -135,6 +146,24 @@ for row in ROWS:
         n = max(1, int((g1 - g0) / adv('·')))
         gx = g0 + ((g1 - g0) - n * adv('·')) / 2
         line = left + [(ch, gx + i * adv('·'), C['gap'], 0) for i, ch in enumerate('·' * n)] + right
+    elif row[0] == 'ffblock':
+        # logo on the left, module list on the right; the shorter column is
+        # padded with blank lines so the two stay vertically centred
+        n_ff = max(len(FF_LOGO), len(FF_FIELDS))
+        for i, r in enumerate(FF_LOGO):
+            ys = y + (n_ff - len(FF_LOGO)) / 2 * CELL + i * CELL
+            for ch, x, fill, bold in place([(t, FF_LIFT.get(c, c), b, 0) for t, c, b in r], X0)[0]:
+                if ch != ' ':
+                    used[(ch, bold)] = None
+                    body.append((ys, ch, x, fill, bold))
+        for i, r in enumerate(FF_FIELDS):
+            ys = y + (n_ff - len(FF_FIELDS)) / 2 * CELL + i * CELL
+            for ch, x, fill, bold in place([(t, FF_LIFT.get(c, c), b, 0) for t, c, b in r], FF_X)[0]:
+                if ch != ' ':
+                    used[(ch, bold)] = None
+                    body.append((ys, ch, x, fill, bold))
+        y += n_ff * CELL
+        continue
     else:
         line, _, _ = place(row[1], X0)
     for ch, x, fill, bold in line:
@@ -182,10 +211,10 @@ title_svg = (f'  <g transform="translate({title_x / S_SMALL:.0f} {title_baseline
              + ''.join(f'<use xlink:href="#{pid(ch, False)}" x="{j * 600}" fill="{C["hdr"]}"/>'
                        for j, ch in enumerate(TITLE) if ch != ' ') + '</g>')
 
-H = int(round(Y0 + 10 * CELL + (-DESC) * S + 24))
+H = int(round(y - CELL + (-DESC) * S + 24))
 svg = f'''<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1000 {H}" width="1000" height="{H}" role="img" aria-labelledby="ttl dsc">
   <title id="ttl">Qaaxaap — powerlevel11k prompt in Maple Mono NF CN</title>
-  <desc id="dsc">Qaaxaap's real powerlevel11k prompt, drawn as glyph outlines: a framed header in ~/Projects/Qaaxaap with a check mark and clock on the right, then the commands whoami, cat ~/.philosophy and ls ~/projects.</desc>
+  <desc id="dsc">Qaaxaap's real powerlevel11k prompt, drawn as glyph outlines: a framed header in ~/Projects/Qaaxaap with a check mark and clock on the right, then whoami, fastfetch -l none -s OS:WM:Terminal, and ls ~/projects.</desc>
   <defs>
     <linearGradient id="win" x1="0" y1="0" x2="0.6" y2="1"><stop offset="0" stop-color="#1e1e2e"/><stop offset="1" stop-color="#181825"/></linearGradient>
     <linearGradient id="bar" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#11111b"/><stop offset="1" stop-color="#1e1e2e"/></linearGradient>
